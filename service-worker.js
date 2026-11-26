@@ -1,5 +1,5 @@
-const CACHE = 'meu-plano-static-v1';
-const CORE = ['./', './index.html', './security.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
+const CACHE = 'meu-plano-static-v2';
+const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
 });
@@ -11,12 +11,10 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
   if (request.mode === 'navigate') {
     event.respondWith(fetch(request).then(response => {
-      const copy = response.clone();
-      caches.open(CACHE).then(cache => cache.put('./index.html', './security.js', copy));
+      if (response.ok) caches.open(CACHE).then(cache => cache.put('./index.html', response.clone()));
       return response;
     }).catch(() => caches.match('./index.html')));
     return;
   }
   event.respondWith(caches.match(request).then(cached => cached || fetch(request)));
 });
-
