@@ -1,5 +1,5 @@
-const CACHE = 'meu-plano-static-v3';
-const CORE = ['./', './index.html', './manifest.webmanifest', './supabase-config.js', './supabase-sync.js', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
+const CACHE = 'meu-plano-static-v4';
+const CORE = ['./', './index.html', './manifest.webmanifest', './supabase-config.js', './supabase-sync.js?v=4', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(CORE)).then(() => self.skipWaiting()));
 });
