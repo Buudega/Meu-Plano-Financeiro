@@ -1,4 +1,4 @@
--- Execute este arquivo uma vez no Supabase > SQL Editor.
+-- Execute este arquivo no Supabase > SQL Editor. Ele pode ser executado novamente.
 create schema if not exists private;
 
 create table if not exists public.households (
@@ -40,6 +40,12 @@ revoke all on public.households, public.household_members, public.app_data from 
 grant select on public.households, public.household_members to authenticated;
 grant select, insert, update on public.app_data to authenticated;
 
+-- Recrie as políticas para que novas execuções atualizem a configuração sem erro.
+drop policy if exists household_read_member on public.households;
+drop policy if exists members_read_household on public.household_members;
+drop policy if exists app_data_read_member on public.app_data;
+drop policy if exists app_data_insert_member on public.app_data;
+drop policy if exists app_data_update_member on public.app_data;
 create policy household_read_member on public.households for select to authenticated using ((select private.is_household_member(id)));
 create policy members_read_household on public.household_members for select to authenticated using ((select private.is_household_member(household_id)));
 create policy app_data_read_member on public.app_data for select to authenticated using ((select private.is_household_member(household_id)));
@@ -71,10 +77,20 @@ begin
   return target_id;
 end;
 $$;
+-- Permite corrigir um código digitado errado ou trocar de espaço sem encerrar a conta.
+create or replace function public.leave_household()
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if (select auth.uid()) is null then raise exception 'Authentication required'; end if;
+  delete from public.household_members where user_id = (select auth.uid());
+end;
+$$;
 revoke all on function public.create_household() from public, anon;
 revoke all on function public.join_household(text) from public, anon;
+revoke all on function public.leave_household() from public, anon;
 grant execute on function public.create_household() to authenticated;
 grant execute on function public.join_household(text) to authenticated;
+grant execute on function public.leave_household() to authenticated;
 
 -- Supabase Realtime: enable app_data in Database > Publications if needed.
 

@@ -12,4 +12,6 @@ App estático publicado no GitHub Pages. Com Supabase configurado, as duas conta
 6. Publique todos os arquivos do projeto no GitHub Pages.
 7. Cada pessoa cria sua própria conta no app. Uma escolhe **Criar espaço do casal** e envia o código exibido; a outra escolhe **Entrar com código**.
 
+Se precisar corrigir um código ou trocar de espaço, abra **Compartilhar** e escolha **Corrigir código / trocar espaço**. Ao atualizar o app com essa opção, execute novamente `supabase-setup.sql` no SQL Editor para criar a função de desconexão.
+
 O plano gratuito do Supabase pode pausar projetos sem atividade. Mantenha backups exportados pelo app. Os dados sincronizados são protegidos por políticas RLS para que só membros do espaço do casal possam acessá-los.

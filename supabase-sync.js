@@ -3,7 +3,7 @@
   const configured = CONFIG.url?.startsWith('https://') && CONFIG.anonKey && !CONFIG.anonKey.startsWith('COLE_');
   const modal = document.createElement('div');
   modal.id = 'syncGate';
-  modal.innerHTML = `<div class="dialog security-card"><div class="logo">M</div><h2>Sincronizar em casal</h2><p id="syncMessage" class="small muted"></p><form id="authForm"><div class="fields"><div class="field full"><label>E-mail</label><input id="syncEmail" type="email" required autocomplete="email"></div><div class="field full"><label>Senha da conta</label><input id="syncPassword" type="password" required minlength="8" autocomplete="current-password"></div></div><div class="formactions"><button type="button" id="signUpBtn">Criar conta</button><button class="primary">Entrar</button></div></form><div id="householdPanel" hidden><p>Entre em um espaço compartilhado: crie um novo ou use um código recebido do seu parceiro.</p><div class="fields"><button id="createHome" class="primary">Criar espaço do casal</button><div class="field"><label>Código do espaço</label><input id="inviteCode" autocomplete="off"></div></div><button id="joinHome">Entrar com código</button></div><div id="sharePanel" hidden><p>Espaço compartilhado ativo. Use o mesmo código para conectar a outra conta.</p><p><b id="shareCode"></b></p><button id="copyCode">Copiar código</button> <button id="signOut">Sair</button></div><p id="syncError" class="security-error"></p><p id="syncSetup" class="small muted"></p></div>`;
+  modal.innerHTML = `<div class="dialog security-card"><div class="logo">M</div><h2>Sincronizar em casal</h2><p id="syncMessage" class="small muted"></p><form id="authForm"><div class="fields"><div class="field full"><label>E-mail</label><input id="syncEmail" type="email" required autocomplete="email"></div><div class="field full"><label>Senha da conta</label><input id="syncPassword" type="password" required minlength="8" autocomplete="current-password"></div></div><div class="formactions"><button type="button" id="signUpBtn">Criar conta</button><button class="primary">Entrar</button></div></form><div id="householdPanel" hidden><p>Entre em um espaço compartilhado: crie um novo ou use um código recebido do seu parceiro.</p><div class="fields"><button id="createHome" class="primary">Criar espaço do casal</button><div class="field"><label for="inviteCode">Código do espaço</label><input id="inviteCode" maxlength="32" autocapitalize="characters" spellcheck="false" autocomplete="off"></div></div><button id="joinHome" class="primary">Entrar com código</button></div><div id="sharePanel" hidden><p>Espaço compartilhado ativo. Use o mesmo código para conectar a outra conta.</p><p><b id="shareCode"></b></p><button id="copyCode">Copiar código</button> <button id="changeHousehold">Corrigir código / trocar espaço</button> <button id="signOut">Sair da conta</button></div><p id="syncError" class="security-error"></p><p id="syncSetup" class="small muted"></p></div>`;
   document.body.append(modal);
   const $ = id => document.getElementById(id);
   let client = null, user = null, householdId = null, timer = null, channel = null, lastRemote = '';
@@ -88,8 +88,23 @@
     catch(err){error('Não foi possível criar o espaço. Confira se o SQL de configuração foi executado.');}
   };
   $('joinHome').onclick = async () => {
-    try { const {data,error:err}=await client.rpc('join_household',{p_code:$('inviteCode').value.trim()}); if(err)throw err; householdId=data; await activateHousehold(); }
-    catch(err){error('Código inválido ou não foi possível entrar no espaço.');}
+    error('');
+    const code = $('inviteCode').value.replace(/[\s-]/g, '').toUpperCase();
+    if (!code) { error('Digite o código que seu parceiro enviou.'); $('inviteCode').focus(); return; }
+    try { const {data,error:err}=await client.rpc('join_household',{p_code:code}); if(err)throw err; householdId=data; await activateHousehold(); }
+    catch(err){error('Não foi possível entrar. Confira o código e tente novamente.'); $('inviteCode').focus(); $('inviteCode').select();}
+  };
+  $('changeHousehold').onclick = async () => {
+    error('');
+    try {
+      const {error:err}=await client.rpc('leave_household');
+      if(err) throw err;
+      if(channel) client.removeChannel(channel);
+      channel=null; householdId=null;
+      await refreshAuth();
+      $('inviteCode').value='';
+      message('Espaço desconectado. Digite o código correto para entrar em outro.');
+    } catch(err) { error('Não foi possível trocar de espaço. Atualize o SQL do Supabase e tente novamente.'); }
   };
   $('copyCode').onclick = async () => { try { await navigator.clipboard.writeText($('shareCode').textContent); message('Código copiado. Envie-o ao seu parceiro.'); } catch { message('Copie o código exibido e envie ao seu parceiro.'); } };
   $('signOut').onclick = async () => { await doSave(); await client.auth.signOut(); user=null; householdId=null; if(channel)client.removeChannel(channel); await refreshAuth(); message('Entre na sua conta para sincronizar os dados.'); showGate(); };
